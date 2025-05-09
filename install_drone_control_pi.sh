@@ -79,24 +79,44 @@ echo "export PROMPT_COMMAND='history -a'" | sudo tee -a /etc/bash.bashrc
 # --- 3. Configure UART for Flight Controller ---
 print_info "Configuring UART interface..."
 
-# Disable Bluetooth to free up UART
-echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
-
-# Enable UART
-echo "enable_uart=1" | sudo tee -a /boot/config.txt
-
-# Stop and disable Bluetooth services
-systemctl stop bluetooth
-systemctl disable bluetooth
-
-# Create serial device if it doesn't exist
-if [ ! -e "/dev/serial0" ]; then
-    ln -s /dev/ttyAMA0 /dev/serial0
+# Check if UART is already enabled
+UART_CONFIGURED=0
+if grep -q "^enable_uart=1" /boot/config.txt && grep -q "^dtoverlay=disable-bt" /boot/config.txt; then
+    print_info "UART already configured in /boot/config.txt"
+else
+    print_info "Configuring UART in /boot/config.txt"
+    # Remove any existing uart/bluetooth config lines to avoid duplicates
+    sed -i '/^enable_uart=/d' /boot/config.txt
+    sed -i '/^dtoverlay=disable-bt/d' /boot/config.txt
+    
+    # Add our configuration
+    echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
+    echo "enable_uart=1" | sudo tee -a /boot/config.txt
+    UART_CONFIGURED=1
 fi
 
-# Ensure proper permissions
-chmod 666 /dev/ttyAMA0
-chmod 666 /dev/serial0
+# Stop and disable Bluetooth services
+systemctl stop bluetooth 2>/dev/null || true
+systemctl disable bluetooth 2>/dev/null || true
+
+# Try to set up serial devices, but don't fail if they don't exist yet
+print_info "Setting up serial devices (will be available after reboot if not present)"
+
+# Create serial device symbolic link if possible
+if [ -e "/dev/ttyAMA0" ]; then
+    ln -sf /dev/ttyAMA0 /dev/serial0 2>/dev/null || true
+    chmod 666 /dev/ttyAMA0 2>/dev/null || true
+fi
+
+if [ -e "/dev/serial0" ]; then
+    chmod 666 /dev/serial0 2>/dev/null || true
+fi
+
+# If we made UART config changes, we need a reboot
+if [ "$UART_CONFIGURED" -eq 1 ]; then
+    print_info "UART configuration has been updated. A reboot will be required after installation."
+    REBOOT_REQUIRED=1
+fi
 
 # --- 4. Install Raspberry Pi Hotspot Failover ---
 print_info "Installing Raspberry Pi Hotspot Failover..."
@@ -212,7 +232,14 @@ echo "Finished: $END_TIME_HUMAN"
 echo "Duration: ${HOURS}h ${MINUTES}m ${SECONDS}s"
 
 print_info "Installation completed successfully!"
-print_info "Please reboot the system."
+
+if [ "$UART_CONFIGURED" -eq 1 ]; then
+    print_info "IMPORTANT: You MUST reboot for the UART configuration changes to take effect."
+    print_info "After reboot, the serial devices (/dev/serial0 and /dev/ttyAMA0) will be available."
+else
+    print_info "A reboot is recommended but not required."
+fi
+
 print_info "After reboot:"
 print_info "1. MAVLink Router will run automatically"
 print_info "2. WebGCS will be available at http://[raspberry-pi-ip]:5000"
