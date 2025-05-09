@@ -120,14 +120,31 @@ fi
 
 # --- 4. Install Raspberry Pi Hotspot Failover ---
 print_info "Installing Raspberry Pi Hotspot Failover..."
+
+# Install required packages
+print_info "Installing required packages..."
+apt-get install -y hostapd dnsmasq
+
+# Clone repository
 cd /home/pi
 if [ -d "RaspberryPiHotspotIfNoWifi" ]; then
     rm -rf "RaspberryPiHotspotIfNoWifi"
 fi
 git clone https://github.com/PeterJBurke/RaspberryPiHotspotIfNoWifi.git
 cd RaspberryPiHotspotIfNoWifi
-chmod +x install.sh
-./install.sh
+
+# Install the check_wifi service and script
+print_info "Installing WiFi check service..."
+cp check_wifi.service /etc/systemd/system/
+cp check_wifi.sh /usr/local/bin/
+chmod +x /usr/local/bin/check_wifi.sh
+
+# Enable and start the service
+systemctl daemon-reload
+systemctl enable check_wifi.service
+systemctl start check_wifi.service
+
+print_info "WiFi Hotspot Failover installation completed"
 
 # --- 5. Install MAVLink Router ---
 print_info "Installing MAVLink Router..."
