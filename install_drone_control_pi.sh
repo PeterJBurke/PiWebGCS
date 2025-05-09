@@ -58,6 +58,40 @@ cleanup_old_installation() {
 print_info() { echo "[INFO] $1"; }
 print_error() { echo "[ERROR] $1" >&2; }
 
+# Function to check internet connectivity
+check_internet() {
+    print_info "Checking internet connectivity..."
+    for i in {1..30}; do
+        if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
+            print_info "Internet connection established"
+            return 0
+        fi
+        print_info "Waiting for internet connection... (attempt $i/30)"
+        sleep 2
+    done
+    print_error "No internet connection after 30 attempts"
+    return 1
+}
+
+# Function to safely clone a git repository with retries
+safe_git_clone() {
+    local repo_url="$1"
+    local target_dir="$2"
+    local max_attempts=3
+    
+    for attempt in $(seq 1 $max_attempts); do
+        print_info "Cloning $repo_url (attempt $attempt/$max_attempts)"
+        if git clone "$repo_url" "$target_dir"; then
+            return 0
+        fi
+        print_error "Git clone failed, checking internet connection..."
+        check_internet || return 1
+        sleep 5
+    done
+    print_error "Failed to clone repository after $max_attempts attempts"
+    return 1
+}
+
 # --- Check for sudo ---
 if [ "$EUID" -ne 0 ]; then
     print_error "Please run as root (use sudo)"
@@ -130,7 +164,10 @@ cd /home/pi
 if [ -d "RaspberryPiHotspotIfNoWifi" ]; then
     rm -rf "RaspberryPiHotspotIfNoWifi"
 fi
-git clone https://github.com/PeterJBurke/RaspberryPiHotspotIfNoWifi.git
+if ! safe_git_clone "https://github.com/PeterJBurke/RaspberryPiHotspotIfNoWifi.git" "RaspberryPiHotspotIfNoWifi"; then
+    print_error "Failed to install WiFi Hotspot Failover. Please check your internet connection and try again."
+    exit 1
+fi
 cd RaspberryPiHotspotIfNoWifi
 
 # Install the check_wifi service and script
@@ -152,7 +189,10 @@ cd /home/pi
 if [ -d "$MAVLINK_ROUTER_DIR" ]; then
     rm -rf "$MAVLINK_ROUTER_DIR"
 fi
-git clone https://github.com/PeterJBurke/installmavlinkrouter2024.git
+if ! safe_git_clone "https://github.com/PeterJBurke/installmavlinkrouter2024.git" "installmavlinkrouter2024"; then
+    print_error "Failed to install MAVLink Router. Please check your internet connection and try again."
+    exit 1
+fi
 cd installmavlinkrouter2024
 chmod +x install.sh
 ./install.sh
@@ -163,7 +203,10 @@ cd /home/pi
 if [ -d "$WEBGCS_DIR" ]; then
     rm -rf "$WEBGCS_DIR"
 fi
-git clone https://github.com/PeterJBurke/WebGCS.git
+if ! safe_git_clone "https://github.com/PeterJBurke/WebGCS.git" "WebGCS"; then
+    print_error "Failed to install WebGCS. Please check your internet connection and try again."
+    exit 1
+fi
 cd WebGCS
 
 # --- 7. Create Python Virtual Environment ---
