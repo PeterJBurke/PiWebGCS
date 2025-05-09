@@ -47,8 +47,12 @@ The script will:
    - Disables Bluetooth to free up UART
    - Enables UART in boot config
    - Sets up proper permissions
-2. Installs MAVLink Router from https://github.com/PeterJBurke/installmavlinkrouter2024
-3. Installs WebGCS from https://github.com/PeterJBurke/WebGCS
+2. Installs WiFi Hotspot Failover from https://github.com/PeterJBurke/RaspberryPiHotspotIfNoWifi
+   - Creates automatic WiFi hotspot when no WiFi connection is available
+   - Provides consistent network access for ground control
+   - Automatically switches between client and AP modes
+3. Installs MAVLink Router from https://github.com/PeterJBurke/installmavlinkrouter2024
+4. Installs WebGCS from https://github.com/PeterJBurke/WebGCS
 3. Sets up Python virtual environment with all dependencies
 4. Configures system services for automatic startup
 5. Sets up UART for flight controller communication
@@ -142,10 +146,22 @@ sudo journalctl -n 50 -u create_ap
    - If issues persist, try rebooting: `sudo reboot`
 
 3. **WiFi Hotspot issues:**
-   - Check if hostapd is installed: `dpkg -l | grep hostapd`
+   - Check service status: `sudo systemctl status check_wifi`
+   - View service logs: `sudo journalctl -fu check_wifi`
+   - Check required packages:
+     ```bash
+     dpkg -l | grep hostapd
+     dpkg -l | grep dnsmasq
+     ```
    - Verify wireless interface: `iwconfig`
-   - Check create_ap service status: `sudo systemctl status create_ap`
    - View WiFi debugging info: `sudo iw dev`
+   - Check hotspot configuration: `cat /etc/hostapd/hostapd.conf`
+   - Test manual hotspot switch:
+     ```bash
+     sudo systemctl stop check_wifi
+     sudo /usr/local/bin/check_wifi.sh
+     sudo systemctl start check_wifi
+     ```
 
 4. **Performance issues:**
    - Check CPU usage: `top`
