@@ -45,7 +45,29 @@ apt-get install -y git python3 python3-pip python3-venv build-essential meson ni
 # Enable immediate history writing
 echo "export PROMPT_COMMAND='history -a'" | sudo tee -a /etc/bash.bashrc
 
-# --- 2. Install Raspberry Pi Hotspot Failover ---
+# --- 2. Configure UART for Flight Controller ---
+print_info "Configuring UART interface..."
+
+# Disable Bluetooth to free up UART
+echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
+
+# Enable UART
+echo "enable_uart=1" | sudo tee -a /boot/config.txt
+
+# Stop and disable Bluetooth services
+systemctl stop bluetooth
+systemctl disable bluetooth
+
+# Create serial device if it doesn't exist
+if [ ! -e "/dev/serial0" ]; then
+    ln -s /dev/ttyAMA0 /dev/serial0
+fi
+
+# Ensure proper permissions
+chmod 666 /dev/ttyAMA0
+chmod 666 /dev/serial0
+
+# --- 3. Install Raspberry Pi Hotspot Failover ---
 print_info "Installing Raspberry Pi Hotspot Failover..."
 cd /home/pi
 if [ -d "RaspberryPiHotspotIfNoWifi" ]; then
@@ -56,7 +78,7 @@ cd RaspberryPiHotspotIfNoWifi
 chmod +x install.sh
 ./install.sh
 
-# --- 3. Install MAVLink Router ---
+# --- 4. Install MAVLink Router ---
 print_info "Installing MAVLink Router..."
 cd /home/pi
 if [ -d "$MAVLINK_ROUTER_DIR" ]; then

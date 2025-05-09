@@ -21,8 +21,12 @@ sudo reboot
 
 ## What the Installation Does
 
-1. Installs MAVLink Router from https://github.com/PeterJBurke/installmavlinkrouter2024
-2. Installs WebGCS from https://github.com/PeterJBurke/WebGCS
+1. Configures UART for flight controller communication
+   - Disables Bluetooth to free up UART
+   - Enables UART in boot config
+   - Sets up proper permissions
+2. Installs MAVLink Router from https://github.com/PeterJBurke/installmavlinkrouter2024
+3. Installs WebGCS from https://github.com/PeterJBurke/WebGCS
 3. Sets up Python virtual environment with all dependencies
 4. Configures system services for automatic startup
 5. Sets up UART for flight controller communication
@@ -91,11 +95,29 @@ sudo journalctl -n 50 -u create_ap
    - Check firewall settings: `sudo ufw status`
 
 2. **No connection to flight controller:**
-   - Verify UART permissions: `ls -l /dev/serial0`
+   - Check if UART is properly configured:
+     ```bash
+     # Check if UART is enabled in boot config
+     grep "enable_uart" /boot/config.txt
+     grep "dtoverlay=disable-bt" /boot/config.txt
+     
+     # Verify serial device exists
+     ls -l /dev/serial0
+     ls -l /dev/ttyAMA0
+     
+     # Check permissions
+     sudo chmod 666 /dev/ttyAMA0
+     sudo chmod 666 /dev/serial0
+     ```
    - Check if user 'pi' is in dialout group: `groups pi`
-   - Verify UART is enabled: `sudo raspi-config` (Interface Options > Serial)
+   - Verify Bluetooth is disabled:
+     ```bash
+     systemctl status bluetooth
+     hciconfig
+     ```
    - Check physical connections and wiring
    - Verify baud rate matches flight controller (default: 57600)
+   - If issues persist, try rebooting: `sudo reboot`
 
 3. **WiFi Hotspot issues:**
    - Check if hostapd is installed: `dpkg -l | grep hostapd`
