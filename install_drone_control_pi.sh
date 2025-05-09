@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Record start time
+START_TIME=$(date +%s)
+START_TIME_HUMAN=$(date)
+echo "Installation started at: $START_TIME_HUMAN"
+
 # ==============================================================================
 # Drone Control System Installation Script
 # Target Platform: Raspberry Pi OS (Raspbian)
@@ -129,7 +134,21 @@ print_info "Setting permissions..."
 chown -R pi:pi "$WEBGCS_DIR"
 usermod -a -G dialout pi
 
-print_info "Installation complete! Please reboot the system."
+# Calculate and display duration
+END_TIME=$(date +%s)
+END_TIME_HUMAN=$(date)
+DURATION=$((END_TIME - START_TIME))
+HOURS=$((DURATION / 3600))
+MINUTES=$(( (DURATION % 3600) / 60 ))
+SECONDS=$((DURATION % 60))
+
+echo -e "\nInstallation timing summary:"
+echo "Started : $START_TIME_HUMAN"
+echo "Finished: $END_TIME_HUMAN"
+echo "Duration: ${HOURS}h ${MINUTES}m ${SECONDS}s"
+
+print_info "Installation completed successfully!"
+print_info "Please reboot the system."
 print_info "After reboot:"
 print_info "1. MAVLink Router will run automatically"
 print_info "2. WebGCS will be available at http://[raspberry-pi-ip]:5000"
