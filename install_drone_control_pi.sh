@@ -1,0 +1,135 @@
+#!/bin/bash
+
+# ==============================================================================
+# Drone Control System Installation Script
+# Target Platform: Raspberry Pi OS (Raspbian)
+# Components:
+# - MAVLink Router
+# - WebGCS
+# - Python Environment Setup
+# - Systemd Service Configuration
+# ==============================================================================
+
+set -e # Exit immediately if a command exits with a non-zero status
+
+# --- Configuration ---
+PYTHON_VERSION="python3"
+PIP_VERSION="pip3"
+WEBGCS_DIR="/home/pi/WebGCS"
+MAVLINK_ROUTER_DIR="/home/pi/installmavlinkrouter2024"
+SERIAL_PORT="/dev/serial0"
+FC_BAUD_RATE="57600"
+MAVLINK_ROUTER_UDP_PORT="14550"
+
+# --- Helper Functions ---
+print_info() { echo "[INFO] $1"; }
+print_error() { echo "[ERROR] $1" >&2; }
+
+# --- Check for sudo ---
+if [ "$EUID" -ne 0 ]; then
+    print_error "Please run as root (use sudo)"
+    exit 1
+fi
+
+# --- 1. System Updates and Dependencies ---
+print_info "Updating system packages..."
+apt-get update
+apt-get upgrade -y
+apt-get install -y git python3 python3-pip python3-venv build-essential meson ninja-build pkg-config curl
+
+# --- 2. Install MAVLink Router ---
+print_info "Installing MAVLink Router..."
+cd /home/pi
+if [ -d "$MAVLINK_ROUTER_DIR" ]; then
+    rm -rf "$MAVLINK_ROUTER_DIR"
+fi
+git clone https://github.com/PeterJBurke/installmavlinkrouter2024.git
+cd installmavlinkrouter2024
+chmod +x install.sh
+./install.sh
+
+# --- 3. Install WebGCS ---
+print_info "Installing WebGCS..."
+cd /home/pi
+if [ -d "$WEBGCS_DIR" ]; then
+    rm -rf "$WEBGCS_DIR"
+fi
+git clone https://github.com/PeterJBurke/WebGCS.git
+cd WebGCS
+
+# --- 4. Create Python Virtual Environment ---
+print_info "Setting up Python virtual environment..."
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+deactivate
+
+# --- 5. Configure MAVLink Router Service ---
+print_info "Configuring MAVLink Router service..."
+cat > /etc/mavlink-router/main.conf << EOF
+[General]
+MavlinkSysid = 254
+UdpEndpoints = gcs_app
+UartEndpoints = fc_serial
+
+[UartEndpoint fc_serial]
+Device = ${SERIAL_PORT}
+Baud = ${FC_BAUD_RATE}
+FlowControl = false
+
+[UdpEndpoint gcs_app]
+Mode = Normal
+Address = 127.0.0.1
+Port = ${MAVLINK_ROUTER_UDP_PORT}
+EOF
+
+# --- 6. Create WebGCS Service ---
+print_info "Creating WebGCS service..."
+cat > /etc/systemd/system/webgcs.service << EOF
+[Unit]
+Description=WebGCS Service
+After=network.target mavlink-router.service
+Requires=mavlink-router.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=${WEBGCS_DIR}
+Environment=PATH=${WEBGCS_DIR}/venv/bin:$PATH
+ExecStart=${WEBGCS_DIR}/venv/bin/python app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# --- 7. Enable and Start Services ---
+print_info "Enabling and starting services..."
+systemctl daemon-reload
+systemctl enable mavlink-router.service
+systemctl enable webgcs.service
+systemctl start mavlink-router.service
+systemctl start webgcs.service
+
+# --- 8. Configure UART ---
+print_info "Configuring UART..."
+if ! grep -q "enable_uart=1" /boot/config.txt; then
+    echo "enable_uart=1" >> /boot/config.txt
+fi
+if ! grep -q "dtoverlay=disable-bt" /boot/config.txt; then
+    echo "dtoverlay=disable-bt" >> /boot/config.txt
+fi
+
+# --- 9. Set Permissions ---
+print_info "Setting permissions..."
+chown -R pi:pi "$WEBGCS_DIR"
+usermod -a -G dialout pi
+
+print_info "Installation complete! Please reboot the system."
+print_info "After reboot:"
+print_info "1. MAVLink Router will run automatically"
+print_info "2. WebGCS will be available at http://[raspberry-pi-ip]:5000"
+print_info "3. UART will be configured for the flight controller"
+echo
+print_info "To reboot now, type: sudo reboot"
