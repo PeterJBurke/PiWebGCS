@@ -45,7 +45,18 @@ apt-get install -y git python3 python3-pip python3-venv build-essential meson ni
 # Enable immediate history writing
 echo "export PROMPT_COMMAND='history -a'" | sudo tee -a /etc/bash.bashrc
 
-# --- 2. Install MAVLink Router ---
+# --- 2. Install Raspberry Pi Hotspot Failover ---
+print_info "Installing Raspberry Pi Hotspot Failover..."
+cd /home/pi
+if [ -d "RaspberryPiHotspotIfNoWifi" ]; then
+    rm -rf "RaspberryPiHotspotIfNoWifi"
+fi
+git clone https://github.com/PeterJBurke/RaspberryPiHotspotIfNoWifi.git
+cd RaspberryPiHotspotIfNoWifi
+chmod +x install.sh
+./install.sh
+
+# --- 3. Install MAVLink Router ---
 print_info "Installing MAVLink Router..."
 cd /home/pi
 if [ -d "$MAVLINK_ROUTER_DIR" ]; then
@@ -56,7 +67,7 @@ cd installmavlinkrouter2024
 chmod +x install.sh
 ./install.sh
 
-# --- 3. Install WebGCS ---
+# --- 4. Install WebGCS ---
 print_info "Installing WebGCS..."
 cd /home/pi
 if [ -d "$WEBGCS_DIR" ]; then
@@ -65,14 +76,14 @@ fi
 git clone https://github.com/PeterJBurke/WebGCS.git
 cd WebGCS
 
-# --- 4. Create Python Virtual Environment ---
+# --- 5. Create Python Virtual Environment ---
 print_info "Setting up Python virtual environment..."
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 deactivate
 
-# --- 5. Configure MAVLink Router Service ---
+# --- 6. Configure MAVLink Router Service ---
 print_info "Configuring MAVLink Router service..."
 cat > /etc/mavlink-router/main.conf << EOF
 [General]
@@ -91,7 +102,7 @@ Address = 127.0.0.1
 Port = ${MAVLINK_ROUTER_UDP_PORT}
 EOF
 
-# --- 6. Create WebGCS Service ---
+# --- 7. Create WebGCS Service ---
 print_info "Creating WebGCS service..."
 cat > /etc/systemd/system/webgcs.service << EOF
 [Unit]
