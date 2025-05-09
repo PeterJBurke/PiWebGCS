@@ -218,6 +218,22 @@ deactivate
 
 # --- 8. Configure MAVLink Router Service ---
 print_info "Configuring MAVLink Router service..."
+
+# Ensure config directory exists
+mkdir -p /etc/mavlink-router
+
+# Create systemd override directory
+mkdir -p /etc/systemd/system/mavlink-router.service.d
+
+# Create override file to add condition for serial device
+cat > /etc/systemd/system/mavlink-router.service.d/override.conf << EOF
+[Unit]
+ConditionPathExists=/dev/serial0
+After=dev-serial0.device
+Requires=dev-serial0.device
+EOF
+
+# Create MAVLink Router config
 cat > /etc/mavlink-router/main.conf << EOF
 [General]
 MavlinkSysid = 254
@@ -237,11 +253,14 @@ EOF
 
 # --- 9. Create WebGCS Service ---
 print_info "Creating WebGCS service..."
-cat > /etc/systemd/system/webgcs.service << EOF
+
+# Create WebGCS service
+cat > /lib/systemd/system/webgcs.service << EOF
 [Unit]
 Description=WebGCS Service
-After=network.target mavlink-router.service
-Requires=mavlink-router.service
+After=network.target mavlink-router.service dev-serial0.device
+Requires=mavlink-router.service dev-serial0.device
+ConditionPathExists=/dev/serial0
 
 [Service]
 Type=simple
@@ -296,6 +315,36 @@ print_info "Installation completed successfully!"
 if [ "$UART_CONFIGURED" -eq 1 ]; then
     print_info "IMPORTANT: You MUST reboot for the UART configuration changes to take effect."
     print_info "After reboot, the serial devices (/dev/serial0 and /dev/ttyAMA0) will be available."
+    print_info "The MAVLink Router and WebGCS services will start automatically after reboot."
+    
+    # Disable services until after reboot
+    systemctl disable mavlink-router
+    systemctl disable webgcs
+    
+    print_info "Services will be enabled at next boot"
+    
+    # Create systemd oneshot service to enable services after reboot
+    cat > /etc/systemd/system/enable-drone-services.service << EOF
+[Unit]
+Description=Enable Drone Control Services After Reboot
+After=dev-serial0.device
+Requires=dev-serial0.device
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl enable mavlink-router
+ExecStart=/bin/systemctl start mavlink-router
+ExecStart=/bin/systemctl enable webgcs
+ExecStart=/bin/systemctl start webgcs
+ExecStart=/bin/systemctl disable enable-drone-services
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Enable the oneshot service
+    systemctl enable enable-drone-services
 else
     print_info "A reboot is recommended but not required."
 fi
