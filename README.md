@@ -39,3 +39,118 @@ sudo reboot
 - Fresh install of Raspberry Pi OS (Raspbian)
 - Internet connection for installation
 - Flight controller connected to UART (GPIO 14/15)
+
+## Troubleshooting Guide
+
+### Checking Service Status
+
+Check the status of all related services:
+```bash
+# Check MAVLink Router service
+sudo systemctl status mavlink-router
+
+# Check WebGCS service
+sudo systemctl status webgcs
+
+# Check WiFi Hotspot service
+sudo systemctl status create_ap
+```
+
+### Viewing Log Files
+
+1. View logs in real-time (continuous):
+```bash
+# MAVLink Router logs
+sudo journalctl -fu mavlink-router
+
+# WebGCS logs
+sudo journalctl -fu webgcs
+
+# WiFi Hotspot logs
+sudo journalctl -fu create_ap
+```
+
+2. View recent log snapshots:
+```bash
+# Last 50 lines of MAVLink Router logs
+sudo journalctl -n 50 -u mavlink-router
+
+# Last 50 lines of WebGCS logs
+sudo journalctl -n 50 -u webgcs
+
+# Last 50 lines of WiFi Hotspot logs
+sudo journalctl -n 50 -u create_ap
+```
+
+### Common Issues and Solutions
+
+1. **WebGCS not accessible:**
+   - Check if the service is running: `sudo systemctl status webgcs`
+   - Verify your Pi's IP address: `hostname -I`
+   - Test local access: `curl http://localhost:5000`
+   - Check firewall settings: `sudo ufw status`
+
+2. **No connection to flight controller:**
+   - Verify UART permissions: `ls -l /dev/serial0`
+   - Check if user 'pi' is in dialout group: `groups pi`
+   - Verify UART is enabled: `sudo raspi-config` (Interface Options > Serial)
+   - Check physical connections and wiring
+   - Verify baud rate matches flight controller (default: 57600)
+
+3. **WiFi Hotspot issues:**
+   - Check if hostapd is installed: `dpkg -l | grep hostapd`
+   - Verify wireless interface: `iwconfig`
+   - Check create_ap service status: `sudo systemctl status create_ap`
+   - View WiFi debugging info: `sudo iw dev`
+
+4. **Performance issues:**
+   - Check CPU usage: `top`
+   - Monitor temperature: `vcgencmd measure_temp`
+   - Check disk space: `df -h`
+   - View memory usage: `free -h`
+
+### Manual Service Control
+
+Restart services:
+```bash
+sudo systemctl restart mavlink-router
+sudo systemctl restart webgcs
+sudo systemctl restart create_ap
+```
+
+Stop services:
+```bash
+sudo systemctl stop mavlink-router
+sudo systemctl stop webgcs
+sudo systemctl stop create_ap
+```
+
+Start services:
+```bash
+sudo systemctl start mavlink-router
+sudo systemctl start webgcs
+sudo systemctl start create_ap
+```
+
+### Additional Tips
+
+1. **Network Connectivity:**
+   - Test internet connectivity: `ping 8.8.8.8`
+   - Check network interfaces: `ifconfig`
+   - View network routing: `netstat -rn`
+
+2. **System Health:**
+   - Check system logs: `sudo dmesg | tail`
+   - View boot logs: `journalctl -b`
+   - Monitor resource usage: `htop` (install if needed)
+
+3. **Configuration Files:**
+   - MAVLink Router config: `/etc/mavlink-router/main.conf`
+   - WebGCS config: `/home/pi/WebGCS/config.py`
+   - WiFi Hotspot config: `/etc/create_ap.conf`
+
+If issues persist after trying these solutions, check the GitHub issues page or create a new issue with:
+- Relevant log outputs
+- System information (`uname -a`)
+- Description of the problem
+- Steps to reproduce
