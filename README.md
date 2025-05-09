@@ -19,6 +19,28 @@ sudo ./install_drone_control_pi.sh
 sudo reboot
 ```
 
+## Re-installation
+
+The installation script can be safely run multiple times. If you want to reinstall or update the system:
+
+```bash
+# 1. Download the latest installation script
+curl -O https://raw.githubusercontent.com/PeterJBurke/PiWebGCS/main/install_drone_control_pi.sh
+
+# 2. Make the script executable
+chmod +x install_drone_control_pi.sh
+
+# 3. Run the installation script
+sudo ./install_drone_control_pi.sh
+```
+
+The script will:
+- Stop and remove all existing services
+- Clean up old configuration files
+- Remove previous installations
+- Perform a fresh installation
+```
+
 ## What the Installation Does
 
 1. Configures UART for flight controller communication
