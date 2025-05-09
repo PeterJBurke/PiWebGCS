@@ -229,8 +229,14 @@ mkdir -p /etc/systemd/system/mavlink-router.service.d
 cat > /etc/systemd/system/mavlink-router.service.d/override.conf << EOF
 [Unit]
 ConditionPathExists=/dev/serial0
-After=dev-serial0.device
-Requires=dev-serial0.device
+After=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
+Requires=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Restart=on-failure
+RestartSec=5s
 EOF
 
 # Create MAVLink Router config
@@ -258,9 +264,18 @@ print_info "Creating WebGCS service..."
 cat > /lib/systemd/system/webgcs.service << EOF
 [Unit]
 Description=WebGCS Service
-After=network.target mavlink-router.service dev-serial0.device
-Requires=mavlink-router.service dev-serial0.device
+After=network.target mavlink-router.service dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
+Requires=mavlink-router.service dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
 ConditionPathExists=/dev/serial0
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/WebGCS
+Environment=PATH=/home/pi/WebGCS/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/pi/WebGCS/venv/bin/python3 app.py
+Restart=on-failure
+RestartSec=5s
 
 [Service]
 Type=simple
@@ -327,8 +342,9 @@ if [ "$UART_CONFIGURED" -eq 1 ]; then
     cat > /etc/systemd/system/enable-drone-services.service << EOF
 [Unit]
 Description=Enable Drone Control Services After Reboot
-After=dev-serial0.device
-Requires=dev-serial0.device
+After=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
+Requires=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
+ConditionPathExists=/dev/serial0
 
 [Service]
 Type=oneshot
