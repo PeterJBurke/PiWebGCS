@@ -228,7 +228,7 @@ print_info "Configuring MAVLink Router service..."
 # Ensure config directory exists
 mkdir -p /etc/mavlink-router
 
-# Create common serial device dependency file
+# Create common serial device dependency file for WebGCS
 print_info "Creating common serial device dependency configuration..."
 cat > /etc/systemd/system/serial-device.conf << EOF
 [Unit]
@@ -237,40 +237,11 @@ After=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
 Requires=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
 EOF
 
-# Create systemd override directory for mavlink-router
-mkdir -p /etc/systemd/system/mavlink-router.service.d
-
-# Create override file for mavlink-router
-cat > /etc/systemd/system/mavlink-router.service.d/override.conf << EOF
-[Unit]
-# Include common serial device dependencies
-.include /etc/systemd/system/serial-device.conf
-StartLimitIntervalSec=60
-StartLimitBurst=5
-
-[Service]
-Restart=on-failure
-RestartSec=5s
-EOF
-
 # Create MAVLink Router config
-cat > /etc/mavlink-router/main.conf << EOF
-[General]
-MavlinkSysid = 254
-TcpServerPort = 5678
-UdpEndpoints = gcs_app
-UartEndpoints = fc_serial
-
-[UartEndpoint fc_serial]
-Device = ${SERIAL_PORT}
-Baud = ${FC_BAUD_RATE}
-FlowControl = false
-
-[UdpEndpoint gcs_app]
-Mode = Normal
-Address = 127.0.0.1
-Port = ${MAVLINK_ROUTER_UDP_PORT}
-EOF
+# Download the proven working configuration from installmavlinkrouter2024
+print_info "Downloading MAVLink Router configuration..."
+wget https://raw.githubusercontent.com/PeterJBurke/installmavlinkrouter2024/main/main.conf -O /etc/mavlink-router/main.conf
+chmod 644 /etc/mavlink-router/main.conf
 
 # --- 9. Create WebGCS Service ---
 print_info "Creating WebGCS service..."
