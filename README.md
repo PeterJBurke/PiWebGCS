@@ -190,7 +190,7 @@ Start services:
 ```bash
 sudo systemctl start mavlink-router
 sudo systemctl start webgcs
-sudo systemctl start create_ap
+sudo systemctl start check_wifi
 ```
 
 ### Additional Tips
@@ -208,7 +208,7 @@ sudo systemctl start create_ap
 3. **Configuration Files:**
    - MAVLink Router config: `/etc/mavlink-router/main.conf`
    - WebGCS config: `/home/pi/WebGCS/config.py`
-   - WiFi Hotspot config: `/etc/create_ap.conf`
+   - WiFi Hotspot config: `/usr/local/bin/check_wifi.sh` (edit SSID and password here)
 
 If issues persist after trying these solutions, check the GitHub issues page or create a new issue with:
 - Relevant log outputs
