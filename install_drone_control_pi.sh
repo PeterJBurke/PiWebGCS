@@ -249,6 +249,7 @@ EOF
 cat > /etc/mavlink-router/main.conf << EOF
 [General]
 MavlinkSysid = 254
+TcpServerPort = 5678
 UdpEndpoints = gcs_app
 UartEndpoints = fc_serial
 
