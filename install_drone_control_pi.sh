@@ -103,7 +103,7 @@ cleanup_old_installation
 print_info "Updating system packages..."
 apt-get update
 apt-get upgrade -y
-apt-get install -y git python3 python3-pip python3-venv build-essential meson ninja-build pkg-config curl
+apt-get install -y git python3 python3-pip python3-venv build-essential curl
 
 # Enable immediate history writing
 echo "export PROMPT_COMMAND='history -a'" | sudo tee -a /etc/bash.bashrc
