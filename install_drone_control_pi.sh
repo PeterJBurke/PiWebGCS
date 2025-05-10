@@ -210,9 +210,31 @@ if ! safe_git_clone "https://github.com/PeterJBurke/WebGCS.git" "WebGCS"; then
 fi
 cd WebGCS
 
-# Update WebGCS config to use localhost
-print_info "Updating WebGCS configuration..."
-sed -i "s/DRONE_TCP_ADDRESS = os.getenv('DRONE_TCP_ADDRESS', '[^']*')/DRONE_TCP_ADDRESS = os.getenv('DRONE_TCP_ADDRESS', '127.0.0.1')/" config.py
+# Create WebGCS config
+print_info "Creating WebGCS configuration..."
+cat > "${WEBGCS_DIR}/config.py" << EOF
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Drone Connection Settings
+DRONE_TCP_ADDRESS = os.getenv('DRONE_TCP_ADDRESS', '127.0.0.1')
+DRONE_TCP_PORT = os.getenv('DRONE_TCP_PORT', '5678')
+MAVLINK_CONNECTION_STRING = f'tcp:{DRONE_TCP_ADDRESS}:{DRONE_TCP_PORT}'
+
+# Web Server Settings
+WEB_SERVER_HOST = os.getenv('WEB_SERVER_HOST', '0.0.0.0')  # Listen on all interfaces
+WEB_SERVER_PORT = int(os.getenv('WEB_SERVER_PORT', '5000'))
+SECRET_KEY = os.getenv('SECRET_KEY', 'desktop_drone_secret!')
+
+# MAVLink Settings
+HEARTBEAT_TIMEOUT = int(os.getenv('HEARTBEAT_TIMEOUT', '30'))
+REQUEST_STREAM_RATE_HZ = int(os.getenv('REQUEST_STREAM_RATE_HZ', '4'))
+COMMAND_ACK_TIMEOUT = int(os.getenv('COMMAND_ACK_TIMEOUT', '10'))
+TELEMETRY_UPDATE_INTERVAL = float(os.getenv('TELEMETRY_UPDATE_INTERVAL', '0.1'))
+EOF
 
 # --- 7. Create Python Virtual Environment ---
 print_info "Setting up Python virtual environment..."
