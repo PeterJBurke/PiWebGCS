@@ -44,7 +44,6 @@ cleanup_old_installation() {
     
     # Remove old installations
     rm -rf "$WEBGCS_DIR"
-    rm -rf "$MAVLINK_ROUTER_DIR"
     rm -rf "/home/pi/RaspberryPiHotspotIfNoWifi"
     
     # Reload systemd to recognize removed services
