@@ -211,6 +211,10 @@ if ! safe_git_clone "https://github.com/PeterJBurke/WebGCS.git" "WebGCS"; then
 fi
 cd WebGCS
 
+# Update WebGCS config to use localhost
+print_info "Updating WebGCS configuration..."
+sed -i 's/^IP_ADDRESS = .*/IP_ADDRESS = "127.0.0.1"/' config.py
+
 # --- 7. Create Python Virtual Environment ---
 print_info "Setting up Python virtual environment..."
 python3 -m venv venv
