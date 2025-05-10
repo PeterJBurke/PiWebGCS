@@ -220,7 +220,10 @@ cd WebGCS
 
 # Update WebGCS config
 print_info "Updating WebGCS configuration..."
+# Set web server to listen on all interfaces
 sed -i "s/WEB_SERVER_HOST = os.getenv('WEB_SERVER_HOST', '[^']*')/WEB_SERVER_HOST = os.getenv('WEB_SERVER_HOST', '0.0.0.0')  # Listen on all interfaces/" "${WEBGCS_DIR}/config.py"
+# Set drone TCP address to localhost
+sed -i "s/DRONE_TCP_ADDRESS = os.getenv('DRONE_TCP_ADDRESS', '[^']*')/DRONE_TCP_ADDRESS = os.getenv('DRONE_TCP_ADDRESS', '127.0.0.1')/" "${WEBGCS_DIR}/config.py"
 
 # --- 7. Create Python Virtual Environment ---
 print_info "Setting up Python virtual environment..."
