@@ -213,7 +213,7 @@ cd WebGCS
 
 # Update WebGCS config to use localhost
 print_info "Updating WebGCS configuration..."
-sed -i 's/^IP_ADDRESS = .*/IP_ADDRESS = "127.0.0.1"/' config.py
+sed -i "s/DRONE_TCP_ADDRESS = os.getenv('DRONE_TCP_ADDRESS', '[^']*')/DRONE_TCP_ADDRESS = os.getenv('DRONE_TCP_ADDRESS', '127.0.0.1')/" config.py
 
 # --- 7. Create Python Virtual Environment ---
 print_info "Setting up Python virtual environment..."
