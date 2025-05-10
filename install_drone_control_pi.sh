@@ -186,17 +186,25 @@ print_info "WiFi Hotspot Failover installation completed"
 
 # --- 5. Install MAVLink Router ---
 print_info "Installing MAVLink Router..."
-cd /home/pi
-if [ -d "$MAVLINK_ROUTER_DIR" ]; then
-    rm -rf "$MAVLINK_ROUTER_DIR"
+
+# Check if MAVLink Router is already installed
+if command -v mavlink-routerd &> /dev/null && systemctl is-enabled mavlink-router &> /dev/null; then
+    print_info "MAVLink Router is already installed and service is configured."
+    print_info "Skipping download and build to save time."
+    print_info "If you want to force a reinstall, please remove mavlink-routerd and disable the service first."
+else
+    cd /home/pi
+    if [ -d "$MAVLINK_ROUTER_DIR" ]; then
+        rm -rf "$MAVLINK_ROUTER_DIR"
+    fi
+    if ! safe_git_clone "https://github.com/PeterJBurke/installmavlinkrouter2024.git" "installmavlinkrouter2024"; then
+        print_error "Failed to install MAVLink Router. Please check your internet connection and try again."
+        exit 1
+    fi
+    cd installmavlinkrouter2024
+    chmod +x install.sh
+    ./install.sh
 fi
-if ! safe_git_clone "https://github.com/PeterJBurke/installmavlinkrouter2024.git" "installmavlinkrouter2024"; then
-    print_error "Failed to install MAVLink Router. Please check your internet connection and try again."
-    exit 1
-fi
-cd installmavlinkrouter2024
-chmod +x install.sh
-./install.sh
 
 # --- 6. Install WebGCS ---
 print_info "Installing WebGCS..."
