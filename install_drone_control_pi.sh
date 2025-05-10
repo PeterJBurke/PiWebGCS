@@ -228,15 +228,23 @@ print_info "Configuring MAVLink Router service..."
 # Ensure config directory exists
 mkdir -p /etc/mavlink-router
 
-# Create systemd override directory
-mkdir -p /etc/systemd/system/mavlink-router.service.d
-
-# Create override file to add condition for serial device
-cat > /etc/systemd/system/mavlink-router.service.d/override.conf << EOF
+# Create common serial device dependency file
+print_info "Creating common serial device dependency configuration..."
+cat > /etc/systemd/system/serial-device.conf << EOF
 [Unit]
 ConditionPathExists=/dev/serial0
 After=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
 Requires=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
+EOF
+
+# Create systemd override directory for mavlink-router
+mkdir -p /etc/systemd/system/mavlink-router.service.d
+
+# Create override file for mavlink-router
+cat > /etc/systemd/system/mavlink-router.service.d/override.conf << EOF
+[Unit]
+# Include common serial device dependencies
+.include /etc/systemd/system/serial-device.conf
 StartLimitIntervalSec=60
 StartLimitBurst=5
 
@@ -271,9 +279,10 @@ print_info "Creating WebGCS service..."
 cat > /lib/systemd/system/webgcs.service << EOF
 [Unit]
 Description=WebGCS Service
-After=network.target mavlink-router.service dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
-Requires=mavlink-router.service dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
-ConditionPathExists=/dev/serial0
+# Include common serial device dependencies
+.include /etc/systemd/system/serial-device.conf
+After=network.target mavlink-router.service
+Requires=mavlink-router.service
 
 [Service]
 Type=simple
@@ -283,15 +292,6 @@ Environment=PATH=/home/pi/WebGCS/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sb
 ExecStart=/home/pi/WebGCS/venv/bin/python3 app.py
 Restart=on-failure
 RestartSec=5s
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=${WEBGCS_DIR}
-Environment=PATH=${WEBGCS_DIR}/venv/bin:$PATH
-ExecStart=${WEBGCS_DIR}/venv/bin/python app.py
-Restart=always
-RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
@@ -349,9 +349,8 @@ if [ "$UART_CONFIGURED" -eq 1 ]; then
     cat > /etc/systemd/system/enable-drone-services.service << EOF
 [Unit]
 Description=Enable Drone Control Services After Reboot
-After=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
-Requires=dev-serial0.device sys-devices-platform-serial0-tty-ttyAMA0.device
-ConditionPathExists=/dev/serial0
+# Include common serial device dependencies
+.include /etc/systemd/system/serial-device.conf
 
 [Service]
 Type=oneshot
