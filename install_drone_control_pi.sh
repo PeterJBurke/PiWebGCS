@@ -275,13 +275,20 @@ systemctl enable webgcs.service
 systemctl start mavlink-router.service
 systemctl start webgcs.service
 
-# --- 8. Configure UART ---
+# --- 6. Configure UART ---
 print_info "Configuring UART..."
+
+# Initialize UART configuration flag
+UART_CONFIGURED=0
+
+# Configure UART in config.txt
 if ! grep -q "enable_uart=1" /boot/config.txt; then
     echo "enable_uart=1" >> /boot/config.txt
+    UART_CONFIGURED=1
 fi
 if ! grep -q "dtoverlay=disable-bt" /boot/config.txt; then
     echo "dtoverlay=disable-bt" >> /boot/config.txt
+    UART_CONFIGURED=1
 fi
 
 # --- 9. Set Permissions ---
