@@ -51,6 +51,7 @@ The script will:
    - Creates automatic WiFi hotspot when no WiFi connection is available
    - Provides consistent network access for ground control
    - Automatically switches between client and AP modes
+   - Uses hostapd and dnsmasq for access point functionality
 3. Installs MAVLink Router from https://github.com/PeterJBurke/installmavlinkrouter2024
 4. Installs WebGCS from https://github.com/PeterJBurke/WebGCS
 3. Sets up Python virtual environment with all dependencies
@@ -83,7 +84,7 @@ sudo systemctl status mavlink-router
 sudo systemctl status webgcs
 
 # Check WiFi Hotspot service
-sudo systemctl status create_ap
+sudo systemctl status check_wifi
 ```
 
 ### Viewing Log Files
@@ -97,7 +98,7 @@ sudo journalctl -fu mavlink-router
 sudo journalctl -fu webgcs
 
 # WiFi Hotspot logs
-sudo journalctl -fu create_ap
+sudo journalctl -fu check_wifi
 ```
 
 2. View recent log snapshots:
@@ -175,7 +176,7 @@ Restart services:
 ```bash
 sudo systemctl restart mavlink-router
 sudo systemctl restart webgcs
-sudo systemctl restart create_ap
+sudo systemctl restart check_wifi
 ```
 
 Stop services:
