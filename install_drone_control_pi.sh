@@ -41,7 +41,6 @@ cleanup_old_installation() {
     
     # Remove old config files
     rm -f /etc/mavlink-router/main.conf
-    rm -f /etc/create_ap.conf
     
     # Remove old installations
     rm -rf "$WEBGCS_DIR"
@@ -111,46 +110,49 @@ apt-get install -y git python3 python3-pip python3-venv build-essential meson ni
 echo "export PROMPT_COMMAND='history -a'" | sudo tee -a /etc/bash.bashrc
 
 # --- 3. Configure UART for Flight Controller ---
-print_info "Configuring UART interface..."
+print_info "Configuring serial port..."
 
-# Check if UART is already enabled
-UART_CONFIGURED=0
-if grep -q "^enable_uart=1" /boot/config.txt && grep -q "^dtoverlay=disable-bt" /boot/config.txt; then
-    print_info "UART already configured in /boot/config.txt"
-else
-    print_info "Configuring UART in /boot/config.txt"
-    # Remove any existing uart/bluetooth config lines to avoid duplicates
-    sed -i '/^enable_uart=/d' /boot/config.txt
-    sed -i '/^dtoverlay=disable-bt/d' /boot/config.txt
+# Set configuration paths for Ubuntu on Raspberry Pi
+CONFIG_FILE="/boot/firmware/config.txt"
+CMDLINE_FILE="/boot/firmware/cmdline.txt"
+
+# Configure UART in config.txt
+if [ -f "$CONFIG_FILE" ]; then
+    cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
     
-    # Add our configuration
-    echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
-    echo "enable_uart=1" | sudo tee -a /boot/config.txt
-    UART_CONFIGURED=1
+    # Remove existing uart settings
+    sed -i '/^enable_uart=/d' "$CONFIG_FILE"
+    sed -i '/^dtoverlay=uart/d' "$CONFIG_FILE"
+    sed -i '/^dtoverlay=pi3-disable-bt/d' "$CONFIG_FILE"
+    sed -i '/^dtoverlay=disable-bt/d' "$CONFIG_FILE"
+    sed -i '/^dtparam=uart0=/d' "$CONFIG_FILE"
+    sed -i '/^dtparam=uart1=/d' "$CONFIG_FILE"
+    
+    # Add UART configuration
+    echo "" >> "$CONFIG_FILE"
+    echo "# UART Configuration" >> "$CONFIG_FILE"
+    echo "enable_uart=1" >> "$CONFIG_FILE"
+    echo "dtparam=uart0=on" >> "$CONFIG_FILE"
+    echo "dtparam=uart1=off" >> "$CONFIG_FILE"
+    echo "dtoverlay=disable-bt" >> "$CONFIG_FILE"
+    print_info "Updated config.txt with UART settings (backup saved)"
 fi
 
-# Stop and disable Bluetooth services
-systemctl stop bluetooth 2>/dev/null || true
-systemctl disable bluetooth 2>/dev/null || true
-
-# Try to set up serial devices, but don't fail if they don't exist yet
-print_info "Setting up serial devices (will be available after reboot if not present)"
-
-# Create serial device symbolic link if possible
-if [ -e "/dev/ttyAMA0" ]; then
-    ln -sf /dev/ttyAMA0 /dev/serial0 2>/dev/null || true
-    chmod 666 /dev/ttyAMA0 2>/dev/null || true
+# Remove serial console from cmdline.txt
+if [ -f "$CMDLINE_FILE" ]; then
+    cp "$CMDLINE_FILE" "${CMDLINE_FILE}.bak"
+    sed -i 's/console=ttyAMA0,[0-9]\+ //g' "$CMDLINE_FILE"
+    sed -i 's/console=serial0,[0-9]\+ //g' "$CMDLINE_FILE"
+    print_info "Updated cmdline.txt (backup saved)"
 fi
 
-if [ -e "/dev/serial0" ]; then
-    chmod 666 /dev/serial0 2>/dev/null || true
+# Add user to dialout group
+if ! groups $SUDO_USER | grep -q dialout; then
+    usermod -a -G dialout $SUDO_USER
+    print_info "Added $SUDO_USER to dialout group (will take effect after next login)"
 fi
 
-# If we made UART config changes, we need a reboot
-if [ "$UART_CONFIGURED" -eq 1 ]; then
-    print_info "UART configuration has been updated. A reboot will be required after installation."
-    REBOOT_REQUIRED=1
-fi
+print_info "Serial port configuration complete. Reboot required for changes to take effect."
 
 # --- 4. Install Raspberry Pi Hotspot Failover ---
 print_info "Installing Raspberry Pi Hotspot Failover..."
