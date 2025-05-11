@@ -158,7 +158,6 @@ print_info "Installing Raspberry Pi Hotspot Failover..."
 
 # Install required packages
 print_info "Installing required packages..."
-apt-get install -y hostapd dnsmasq
 
 # Clone repository
 cd /home/pi
