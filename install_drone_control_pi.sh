@@ -176,11 +176,6 @@ cp check_wifi.service /etc/systemd/system/
 cp check_wifi.sh /usr/local/bin/
 chmod +x /usr/local/bin/check_wifi.sh
 
-# Enable and start the service
-systemctl daemon-reload
-systemctl enable check_wifi.service
-systemctl start check_wifi.service
-
 print_info "WiFi Hotspot Failover installation completed"
 
 # --- 5. Install MAVLink Router ---
@@ -357,6 +352,11 @@ EOF
 else
     print_info "A reboot is recommended but not required."
 fi
+
+# Enable and start the WiFi failover service
+systemctl daemon-reload
+systemctl enable check_wifi.service
+systemctl start check_wifi.service
 
 print_info "After reboot:"
 print_info "1. MAVLink Router will run automatically"
